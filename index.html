@@ -1,1 +1,1201 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HalalPay — Interest-Free Community Finance</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap");
+
+      :root {
+        --ink: #1c2321;
+        --paper: #f6f3ec;
+        --card: #ffffff;
+        --sage: #3c6255;
+        --sage-deep: #274539;
+        --gold: #b08947;
+        --gold-soft: #e8d9b5;
+        --line: #dcd5c3;
+        --muted: #7a7568;
+        --danger: #a6403a;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Manrope", sans-serif;
+        background: var(--paper);
+        color: var(--ink);
+        background-image: radial-gradient(
+          circle at 1px 1px,
+          rgba(60, 98, 85, 0.07) 1px,
+          transparent 0
+        );
+        background-size: 22px 22px;
+      }
+      .font-display {
+        font-family: "Fraunces", serif;
+      }
+      .geo-btn {
+        transition: all 0.18s ease;
+      }
+      .geo-btn:active {
+        transform: scale(0.97);
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+      }
+      .tab-active {
+        background: var(--sage-deep);
+        color: #fff;
+      }
+      .tab-inactive {
+        color: var(--muted);
+      }
+      .arch {
+        background: linear-gradient(
+          180deg,
+          var(--sage-deep) 0%,
+          var(--sage) 100%
+        );
+      }
+      .scallop-divider {
+        height: 14px;
+        background-color: var(--sage);
+        background-image: radial-gradient(
+          circle at 12px 100%,
+          var(--paper) 12px,
+          transparent 12.5px
+        );
+        background-size: 24px 14px;
+        background-repeat: repeat-x;
+      }
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--gold-soft);
+        border-radius: 8px;
+      }
+      .fade-in {
+        animation: fadeIn 0.35s ease both;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .progress-track {
+        background: #efe9d8;
+        border-radius: 999px;
+        overflow: hidden;
+      }
+      .progress-fill {
+        background: linear-gradient(90deg, var(--gold), var(--sage));
+      }
+      input:focus,
+      select:focus {
+        outline: 2px solid var(--sage);
+        outline-offset: 1px;
+      }
+      .badge {
+        font-family: "Manrope";
+        font-weight: 700;
+        letter-spacing: 0.04em;
+      }
+      .qr-dots {
+        background-image: radial-gradient(var(--ink) 1.2px, transparent 1.2px);
+        background-size: 5px 5px;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen">
+    <div id="app" class="max-w-md mx-auto min-h-screen relative pb-24"></div>
+
+    <script>
+      /* ===================== DATA LAYER (localStorage demo) ===================== */
+      const DB_KEY = "halalpay_db_v1";
+
+      function loadDB() {
+        let raw = localStorage.getItem(DB_KEY);
+        if (!raw) {
+          const seed = {
+            currentUserId: null,
+            users: {
+              u_demo: {
+                id: "u_demo",
+                name: "Reehan Sheikh",
+                phone: "9876543210",
+                upi: "reehan@okhdfc",
+                password: "demo123",
+                trustScore: 82,
+                joinedGroups: ["g1"],
+                createdAt: Date.now() - 7776000000,
+              },
+            },
+            groups: {
+              g1: {
+                id: "g1",
+                name: "Khanagaon Barakah Circle",
+                type: "chit",
+                cycleAmount: 2000,
+                members: ["u_demo", "m1", "m2", "m3"],
+                memberNames: {
+                  u_demo: "Reehan Sheikh",
+                  m1: "Imran Bhai",
+                  m2: "Salma Begum",
+                  m3: "Yusuf Khan",
+                },
+                currentCycle: 2,
+                totalCycles: 4,
+                turnOrder: ["m1", "u_demo", "m2", "m3"],
+                createdAt: Date.now() - 5184000000,
+              },
+            },
+            transactions: [
+              {
+                id: "t1",
+                groupId: "g1",
+                userId: "u_demo",
+                type: "contribution",
+                amount: 2000,
+                note: "Month 1 contribution",
+                ts: Date.now() - 4000000000,
+                ref: "UPI2024061",
+              },
+              {
+                id: "t2",
+                groupId: "g1",
+                userId: "m1",
+                type: "contribution",
+                amount: 2000,
+                note: "Month 1 contribution",
+                ts: Date.now() - 3900000000,
+                ref: "UPI2024062",
+              },
+              {
+                id: "t3",
+                groupId: "g1",
+                userId: "u_demo",
+                type: "contribution",
+                amount: 2000,
+                note: "Month 2 contribution",
+                ts: Date.now() - 900000000,
+                ref: "UPI2024063",
+              },
+              {
+                id: "t4",
+                groupId: null,
+                userId: "u_demo",
+                type: "loan_given",
+                amount: 5000,
+                note: "Qard Hasan to Imran Bhai — shop repair",
+                ts: Date.now() - 8000000000,
+                ref: "QH-001",
+                status: "active",
+              },
+              {
+                id: "t5",
+                groupId: null,
+                userId: "u_demo",
+                type: "expense",
+                amount: 1200,
+                note: "Grocery — personal ledger",
+                ts: Date.now() - 200000000,
+                ref: "",
+              },
+              {
+                id: "t6",
+                groupId: null,
+                userId: "u_demo",
+                type: "income",
+                amount: 15000,
+                note: "Freelance payment",
+                ts: Date.now() - 600000000,
+                ref: "",
+              },
+              {
+                id: "t7",
+                groupId: null,
+                userId: "u_demo",
+                type: "zakat_paid",
+                amount: 3500,
+                note: "Zakat to Al-Falah Trust",
+                ts: Date.now() - 15000000000,
+                ref: "ZK-2025-01",
+              },
+            ],
+            zakatAssets: {
+              cash: 120000,
+              gold: 80000,
+              savings: 250000,
+              investments: 60000,
+              liabilities: 40000,
+            },
+          };
+          localStorage.setItem(DB_KEY, JSON.stringify(seed));
+          return seed;
+        }
+        return JSON.parse(raw);
+      }
+      function saveDB(db) {
+        localStorage.setItem(DB_KEY, JSON.stringify(db));
+      }
+      let db = loadDB();
+
+      function uid(prefix) {
+        return prefix + "_" + Math.random().toString(36).slice(2, 9);
+      }
+      function fmtINR(n) {
+        return "₹" + Number(n).toLocaleString("en-IN");
+      }
+      function fmtDate(ts) {
+        return new Date(ts).toLocaleDateString("en-IN", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        });
+      }
+      function timeAgo(ts) {
+        const s = Math.floor((Date.now() - ts) / 1000);
+        if (s < 60) return "just now";
+        if (s < 3600) return Math.floor(s / 60) + "m ago";
+        if (s < 86400) return Math.floor(s / 3600) + "h ago";
+        if (s < 2592000) return Math.floor(s / 86400) + "d ago";
+        return fmtDate(ts);
+      }
+
+      /* ===================== ROUTER ===================== */
+      let route = db.currentUserId ? "home" : "welcome";
+      let toastTimer = null;
+
+      function nav(r) {
+        route = r;
+        render();
+        window.scrollTo(0, 0);
+      }
+      function currentUser() {
+        return db.users[db.currentUserId];
+      }
+
+      function toast(msg) {
+        const el = document.getElementById("toast");
+        if (el) {
+          el.textContent = msg;
+          el.classList.remove("hidden");
+          clearTimeout(toastTimer);
+          toastTimer = setTimeout(() => el.classList.add("hidden"), 2200);
+        }
+      }
+
+      /* ===================== RENDER ===================== */
+      function render() {
+        const app = document.getElementById("app");
+        let html = "";
+        if (route === "welcome") html = welcomeScreen();
+        else if (route === "login") html = loginScreen();
+        else if (route === "register") html = registerScreen();
+        else if (route === "home") html = homeScreen();
+        else if (route === "groups") html = groupsScreen();
+        else if (route.startsWith("group:"))
+          html = groupDetailScreen(route.split(":")[1]);
+        else if (route === "newgroup") html = newGroupScreen();
+        else if (route === "zakat") html = zakatScreen();
+        else if (route === "ledger") html = ledgerScreen();
+        else if (route === "profile") html = profileScreen();
+        else if (route === "upi") html = upiPayScreen();
+        else html = welcomeScreen();
+
+        app.innerHTML =
+          html +
+          toastHTML() +
+          (route !== "welcome" && route !== "login" && route !== "register" ?
+            bottomNav()
+          : "");
+        lucideReplace();
+      }
+
+      function toastHTML() {
+        return `<div id="toast" class="hidden fixed bottom-24 left-1/2 -translate-x-1/2 bg-[var(--ink)] text-white text-sm px-4 py-2.5 rounded-full shadow-lg z-50 font-medium"></div>`;
+      }
+
+      /* ===================== SCREENS ===================== */
+
+      function welcomeScreen() {
+        return `
+  <div class="min-h-screen flex flex-col justify-between arch text-white px-6 pt-16 pb-10 fade-in">
+    <div>
+      <div class="flex items-center gap-2 mb-1">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><path d="M12 2C8 6 6 9 6 13a6 6 0 0012 0c0-4-2-7-6-11z"/></svg>
+        <span class="badge text-xs tracking-[0.2em] uppercase opacity-80">Barakah in every rupee</span>
+      </div>
+      <h1 class="font-display text-5xl leading-[1.05] mt-6 font-semibold">Halal<br/>Pay</h1>
+      <p class="mt-4 text-white/75 text-[15px] leading-relaxed max-w-xs">Riba-free community lending, zakat &amp; personal finance — built for people who count barakah, not interest.</p>
+    </div>
+
+    <div class="space-y-3">
+      <div class="grid grid-cols-3 gap-2 mb-6">
+        <div class="card !bg-white/10 !border-white/20 rounded-xl p-3 text-center">
+          <div class="text-lg font-display font-semibold">0%</div>
+          <div class="text-[10px] uppercase tracking-wide text-white/60 mt-0.5">Interest</div>
+        </div>
+        <div class="card !bg-white/10 !border-white/20 rounded-xl p-3 text-center">
+          <div class="text-lg font-display font-semibold">UPI</div>
+          <div class="text-[10px] uppercase tracking-wide text-white/60 mt-0.5">Native</div>
+        </div>
+        <div class="card !bg-white/10 !border-white/20 rounded-xl p-3 text-center">
+          <div class="text-lg font-display font-semibold">2.5%</div>
+          <div class="text-[10px] uppercase tracking-wide text-white/60 mt-0.5">Zakat</div>
+        </div>
+      </div>
+      <button onclick="nav('login')" class="geo-btn w-full bg-[var(--gold)] text-[var(--ink)] font-semibold py-3.5 rounded-full text-[15px]">Log in</button>
+      <button onclick="nav('register')" class="geo-btn w-full border border-white/40 text-white font-semibold py-3.5 rounded-full text-[15px]">Create account</button>
+      <p class="text-center text-white/40 text-xs pt-2">Demo mode · data stays on this device only</p>
+    </div>
+  </div>`;
+      }
+
+      function loginScreen() {
+        return `
+  <div class="min-h-screen flex flex-col px-6 pt-14 fade-in">
+    <button onclick="nav('welcome')" class="w-9 h-9 rounded-full border border-[var(--line)] flex items-center justify-center mb-8"><i data-lucide="arrow-left" class="w-4 h-4"></i></button>
+    <h2 class="font-display text-3xl font-semibold">Welcome back</h2>
+    <p class="text-[var(--muted)] text-sm mt-1 mb-8">Log in to your Halal circles</p>
+
+    <div class="space-y-4">
+      <div>
+        <label class="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Phone number</label>
+        <input id="loginPhone" type="tel" placeholder="98765 43210" value="9876543210" class="w-full mt-1.5 px-4 py-3 rounded-xl border border-[var(--line)] bg-white text-sm"/>
+      </div>
+      <div>
+        <label class="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Password</label>
+        <input id="loginPass" type="password" placeholder="••••••••" value="demo123" class="w-full mt-1.5 px-4 py-3 rounded-xl border border-[var(--line)] bg-white text-sm"/>
+      </div>
+    </div>
+
+    <button onclick="doLogin()" class="geo-btn w-full bg-[var(--sage-deep)] text-white font-semibold py-3.5 rounded-full text-[15px] mt-8">Log in</button>
+    <p class="text-center text-xs text-[var(--muted)] mt-4">Pre-filled with demo account — just tap Log in</p>
+    <p class="text-center text-sm mt-6">New here? <span onclick="nav('register')" class="text-[var(--sage-deep)] font-semibold cursor-pointer">Create an account</span></p>
+  </div>`;
+      }
+
+      function doLogin() {
+        const phone = document.getElementById("loginPhone").value.trim();
+        const pass = document.getElementById("loginPass").value.trim();
+        const found = Object.values(db.users).find(
+          (u) => u.phone === phone && u.password === pass,
+        );
+        if (found) {
+          db.currentUserId = found.id;
+          saveDB(db);
+          nav("home");
+          toast("Welcome back, " + found.name.split(" ")[0] + " 👋");
+        } else {
+          toast("No match — try the pre-filled demo credentials");
+        }
+      }
+
+      function registerScreen() {
+        return `
+  <div class="min-h-screen flex flex-col px-6 pt-14 fade-in">
+    <button onclick="nav('welcome')" class="w-9 h-9 rounded-full border border-[var(--line)] flex items-center justify-center mb-8"><i data-lucide="arrow-left" class="w-4 h-4"></i></button>
+    <h2 class="font-display text-3xl font-semibold">Create account</h2>
+    <p class="text-[var(--muted)] text-sm mt-1 mb-8">Takes less than a minute</p>
+
+    <div class="space-y-4">
+      <div>
+        <label class="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Full name</label>
+        <input id="regName" type="text" placeholder="Your name" class="w-full mt-1.5 px-4 py-3 rounded-xl border border-[var(--line)] bg-white text-sm"/>
+      </div>
+      <div>
+        <label class="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Phone number</label>
+        <input id="regPhone" type="tel" placeholder="98765 43210" class="w-full mt-1.5 px-4 py-3 rounded-xl border border-[var(--line)] bg-white text-sm"/>
+      </div>
+      <div>
+        <label class="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">UPI ID</label>
+        <input id="regUpi" type="text" placeholder="yourname@okbank" class="w-full mt-1.5 px-4 py-3 rounded-xl border border-[var(--line)] bg-white text-sm"/>
+      </div>
+      <div>
+        <label class="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Password</label>
+        <input id="regPass" type="password" placeholder="Create a password" class="w-full mt-1.5 px-4 py-3 rounded-xl border border-[var(--line)] bg-white text-sm"/>
+      </div>
+    </div>
+
+    <button onclick="doRegister()" class="geo-btn w-full bg-[var(--sage-deep)] text-white font-semibold py-3.5 rounded-full text-[15px] mt-8">Create account</button>
+    <p class="text-center text-sm mt-6">Already have one? <span onclick="nav('login')" class="text-[var(--sage-deep)] font-semibold cursor-pointer">Log in</span></p>
+  </div>`;
+      }
+
+      function doRegister() {
+        const name = document.getElementById("regName").value.trim();
+        const phone = document.getElementById("regPhone").value.trim();
+        const upi = document.getElementById("regUpi").value.trim();
+        const pass = document.getElementById("regPass").value.trim();
+        if (!name || !phone || !pass) {
+          toast("Fill in name, phone and password");
+          return;
+        }
+        const id = uid("u");
+        db.users[id] = {
+          id,
+          name,
+          phone,
+          upi: upi || phone + "@upi",
+          password: pass,
+          trustScore: 70,
+          joinedGroups: [],
+          createdAt: Date.now(),
+        };
+        db.currentUserId = id;
+        saveDB(db);
+        nav("home");
+        toast(
+          "Account created — Assalamu Alaikum, " + name.split(" ")[0] + "!",
+        );
+      }
+
+      function logout() {
+        db.currentUserId = null;
+        saveDB(db);
+        nav("welcome");
+      }
+
+      /* -------- HOME -------- */
+      function homeScreen() {
+        const u = currentUser();
+        const myTx = db.transactions
+          .filter((t) => t.userId === u.id)
+          .sort((a, b) => b.ts - a.ts);
+        const income = myTx
+          .filter((t) => t.type === "income")
+          .reduce((s, t) => s + t.amount, 0);
+        const expense = myTx
+          .filter((t) => t.type === "expense")
+          .reduce((s, t) => s + t.amount, 0);
+        const contributions = myTx
+          .filter((t) => t.type === "contribution")
+          .reduce((s, t) => s + t.amount, 0);
+        const balance = income - expense - contributions;
+
+        return `
+  <div class="fade-in">
+    <div class="arch text-white px-6 pt-12 pb-8">
+      <div class="flex justify-between items-start">
+        <div>
+          <p class="text-white/60 text-xs uppercase tracking-wide">Assalamu Alaikum</p>
+          <h1 class="font-display text-2xl font-semibold mt-0.5">${u.name.split(" ")[0]}</h1>
+        </div>
+        <div onclick="nav('profile')" class="w-11 h-11 rounded-full bg-white/15 border border-white/25 flex items-center justify-center font-display font-semibold cursor-pointer">${u.name[0]}</div>
+      </div>
+      <div class="mt-6 card !bg-white/10 !border-white/20 rounded-2xl p-5">
+        <p class="text-white/60 text-xs uppercase tracking-wide">Net balance (demo)</p>
+        <p class="font-display text-3xl font-semibold mt-1">${fmtINR(balance)}</p>
+        <div class="flex gap-4 mt-3 text-xs text-white/70">
+          <span>↑ ${fmtINR(income)} in</span>
+          <span>↓ ${fmtINR(expense + contributions)} out</span>
+        </div>
+      </div>
+    </div>
+    <div class="scallop-divider"></div>
+
+    <div class="px-5 -mt-5 relative z-10">
+      <div class="grid grid-cols-4 gap-2">
+        ${quickAction("users-round", "Groups", "groups")}
+        ${quickAction("hand-coins", "Zakat", "zakat")}
+        ${quickAction("notebook-pen", "Ledger", "ledger")}
+        ${quickAction("qr-code", "Pay", "upi")}
+      </div>
+    </div>
+
+    <div class="px-5 mt-7">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="font-display text-lg font-semibold">Trust Score</h3>
+        <span onclick="nav('profile')" class="text-xs text-[var(--sage-deep)] font-semibold cursor-pointer">Details →</span>
+      </div>
+      <div class="card p-4">
+        <div class="flex justify-between items-center mb-2">
+          <span class="text-2xl font-display font-semibold">${u.trustScore}<span class="text-sm text-[var(--muted)]">/100</span></span>
+          <span class="badge text-[10px] px-2.5 py-1 rounded-full ${u.trustScore >= 75 ? "bg-[var(--gold-soft)] text-[var(--sage-deep)]" : "bg-[#EFE9D8] text-[var(--muted)]"}">${u.trustScore >= 75 ? "Trusted Member" : "Building Trust"}</span>
+        </div>
+        <div class="progress-track h-2"><div class="progress-fill h-2" style="width:${u.trustScore}%"></div></div>
+      </div>
+    </div>
+
+    <div class="px-5 mt-7">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="font-display text-lg font-semibold">Recent Activity</h3>
+        <span onclick="nav('ledger')" class="text-xs text-[var(--sage-deep)] font-semibold cursor-pointer">See all →</span>
+      </div>
+      <div class="space-y-2.5">
+        ${myTx.slice(0, 4).map(txRow).join("") || emptyState("No activity yet")}
+      </div>
+    </div>
+  </div>`;
+      }
+
+      function quickAction(icon, label, r) {
+        return `<div onclick="nav('${r}')" class="card p-3 flex flex-col items-center gap-1.5 cursor-pointer geo-btn">
+    <div class="w-9 h-9 rounded-full bg-[var(--sage-deep)]/10 flex items-center justify-center"><i data-lucide="${icon}" class="w-4 h-4 text-[var(--sage-deep)]"></i></div>
+    <span class="text-[11px] font-semibold text-[var(--ink)]">${label}</span>
+  </div>`;
+      }
+
+      function txRow(t) {
+        const cfg = {
+          income: {
+            icon: "arrow-down-left",
+            color: "text-[var(--sage-deep)]",
+            bg: "bg-[var(--sage-deep)]/10",
+            sign: "+",
+          },
+          expense: {
+            icon: "arrow-up-right",
+            color: "text-[var(--danger)]",
+            bg: "bg-[var(--danger)]/10",
+            sign: "-",
+          },
+          contribution: {
+            icon: "users-round",
+            color: "text-[var(--gold)]",
+            bg: "bg-[var(--gold)]/15",
+            sign: "-",
+          },
+          loan_given: {
+            icon: "hand-heart",
+            color: "text-[var(--sage-deep)]",
+            bg: "bg-[var(--sage-deep)]/10",
+            sign: "-",
+          },
+          loan_repaid: {
+            icon: "corner-down-left",
+            color: "text-[var(--sage-deep)]",
+            bg: "bg-[var(--sage-deep)]/10",
+            sign: "+",
+          },
+          zakat_paid: {
+            icon: "hand-coins",
+            color: "text-[var(--gold)]",
+            bg: "bg-[var(--gold)]/15",
+            sign: "-",
+          },
+          payout: {
+            icon: "gift",
+            color: "text-[var(--sage-deep)]",
+            bg: "bg-[var(--sage-deep)]/10",
+            sign: "+",
+          },
+        }[t.type] || {
+          icon: "circle",
+          color: "text-[var(--muted)]",
+          bg: "bg-gray-100",
+          sign: "",
+        };
+        return `<div class="card p-3.5 flex items-center gap-3">
+    <div class="w-10 h-10 rounded-full ${cfg.bg} flex items-center justify-center shrink-0"><i data-lucide="${cfg.icon}" class="w-4 h-4 ${cfg.color}"></i></div>
+    <div class="flex-1 min-w-0">
+      <p class="text-sm font-semibold truncate">${t.note || t.type.replace("_", " ")}</p>
+      <p class="text-xs text-[var(--muted)]">${timeAgo(t.ts)}</p>
+    </div>
+    <span class="text-sm font-semibold ${cfg.color}">${cfg.sign}${fmtINR(t.amount)}</span>
+  </div>`;
+      }
+
+      function emptyState(msg) {
+        return `<div class="card p-8 text-center">
+    <i data-lucide="inbox" class="w-7 h-7 text-[var(--muted)] mx-auto mb-2"></i>
+    <p class="text-sm text-[var(--muted)]">${msg}</p>
+  </div>`;
+      }
+
+      /* -------- GROUPS -------- */
+      function groupsScreen() {
+        const u = currentUser();
+        const myGroups = Object.values(db.groups).filter((g) =>
+          g.members.includes(u.id),
+        );
+        return `
+  <div class="fade-in pt-12 px-5">
+    <div class="flex justify-between items-center mb-1">
+      <h2 class="font-display text-2xl font-semibold">Circles</h2>
+      <button onclick="nav('newgroup')" class="w-9 h-9 rounded-full bg-[var(--sage-deep)] text-white flex items-center justify-center"><i data-lucide="plus" class="w-4 h-4"></i></button>
+    </div>
+    <p class="text-[var(--muted)] text-sm mb-5">Qard Hasan pools &amp; rotating chit funds — zero interest, full transparency</p>
+
+    <div class="space-y-3">
+      ${myGroups.map((g) => groupCard(g, u)).join("") || emptyState("No circles yet — create one to get started")}
+    </div>
+
+    <div class="mt-8 card p-4 !bg-[var(--gold-soft)]/40 !border-[var(--gold-soft)]">
+      <div class="flex gap-3">
+        <i data-lucide="info" class="w-4 h-4 text-[var(--gold)] shrink-0 mt-0.5"></i>
+        <p class="text-xs text-[var(--ink)]/80 leading-relaxed"><b>Qard Hasan</b> = interest-free loan pool, withdraw when needed, repay the same amount. <b>Chit Fund</b> = fixed monthly cycle, one member receives the full pool each round, on rotation.</p>
+      </div>
+    </div>
+  </div>`;
+      }
+
+      function groupCard(g, u) {
+        const contributed = db.transactions.filter(
+          (t) => t.groupId === g.id && t.type === "contribution",
+        ).length;
+        const pct =
+          g.type === "chit" ?
+            Math.round((g.currentCycle / g.totalCycles) * 100)
+          : Math.min(100, contributed * 10);
+        return `<div onclick="nav('group:${g.id}')" class="card p-4 cursor-pointer geo-btn">
+    <div class="flex justify-between items-start">
+      <div>
+        <span class="badge text-[9px] px-2 py-0.5 rounded-full ${g.type === "chit" ? "bg-[var(--gold-soft)] text-[var(--sage-deep)]" : "bg-[var(--sage-deep)]/10 text-[var(--sage-deep)]"} uppercase">${g.type === "chit" ? "Rotating Chit" : "Qard Hasan Pool"}</span>
+        <h3 class="font-display font-semibold text-lg mt-1.5">${g.name}</h3>
+      </div>
+      <i data-lucide="chevron-right" class="w-4 h-4 text-[var(--muted)] mt-1"></i>
+    </div>
+    <div class="flex items-center gap-1.5 mt-3">
+      ${g.members
+        .slice(0, 4)
+        .map(
+          (m) =>
+            `<div class="w-6 h-6 rounded-full bg-[var(--sage-deep)] text-white text-[10px] flex items-center justify-center font-semibold border-2 border-white">${(g.memberNames[m] || "?")[0]}</div>`,
+        )
+        .join("")}
+      <span class="text-xs text-[var(--muted)] ml-1">${g.members.length} members · ${fmtINR(g.cycleAmount)}/cycle</span>
+    </div>
+    ${g.type === "chit" ? `<div class="progress-track h-1.5 mt-3"><div class="progress-fill h-1.5" style="width:${pct}%"></div></div><p class="text-[11px] text-[var(--muted)] mt-1">Cycle ${g.currentCycle} of ${g.totalCycles}</p>` : ""}
+  </div>`;
+      }
+
+      function newGroupScreen() {
+        return `
+  <div class="fade-in pt-12 px-5">
+    <button onclick="nav('groups')" class="w-9 h-9 rounded-full border border-[var(--line)] flex items-center justify-center mb-6"><i data-lucide="arrow-left" class="w-4 h-4"></i></button>
+    <h2 class="font-display text-2xl font-semibold mb-1">New circle</h2>
+    <p class="text-[var(--muted)] text-sm mb-6">Set up an interest-free group</p>
+
+    <div class="space-y-4">
+      <div>
+        <label class="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Circle name</label>
+        <input id="ngName" placeholder="e.g. Family Support Fund" class="w-full mt-1.5 px-4 py-3 rounded-xl border border-[var(--line)] bg-white text-sm"/>
+      </div>
+      <div>
+        <label class="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Type</label>
+        <div class="grid grid-cols-2 gap-2 mt-1.5">
+          <div id="typeChit" onclick="selectType('chit')" class="card p-3 text-center cursor-pointer border-2 !border-[var(--sage-deep)]">
+            <i data-lucide="rotate-cw" class="w-4 h-4 mx-auto mb-1 text-[var(--sage-deep)]"></i>
+            <p class="text-xs font-semibold">Rotating Chit</p>
+          </div>
+          <div id="typeQard" onclick="selectType('qard')" class="card p-3 text-center cursor-pointer">
+            <i data-lucide="hand-heart" class="w-4 h-4 mx-auto mb-1 text-[var(--muted)]"></i>
+            <p class="text-xs font-semibold">Qard Hasan</p>
+          </div>
+        </div>
+      </div>
+      <div>
+        <label class="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Amount per cycle/member</label>
+        <input id="ngAmount" type="number" placeholder="2000" class="w-full mt-1.5 px-4 py-3 rounded-xl border border-[var(--line)] bg-white text-sm"/>
+      </div>
+      <div>
+        <label class="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Invite members (comma-separated names)</label>
+        <input id="ngMembers" placeholder="Imran, Salma, Yusuf" class="w-full mt-1.5 px-4 py-3 rounded-xl border border-[var(--line)] bg-white text-sm"/>
+      </div>
+    </div>
+
+    <button onclick="createGroup()" class="geo-btn w-full bg-[var(--sage-deep)] text-white font-semibold py-3.5 rounded-full text-[15px] mt-8">Create circle</button>
+  </div>`;
+      }
+      let selectedType = "chit";
+      function selectType(t) {
+        selectedType = t;
+        document
+          .getElementById("typeChit")
+          .classList.toggle("border-2", t === "chit");
+        document
+          .getElementById("typeChit")
+          .classList.toggle("!border-[var(--sage-deep)]", t === "chit");
+        document
+          .getElementById("typeQard")
+          .classList.toggle("border-2", t === "qard");
+        document
+          .getElementById("typeQard")
+          .classList.toggle("!border-[var(--sage-deep)]", t === "qard");
+      }
+      function createGroup() {
+        const u = currentUser();
+        const name = document.getElementById("ngName").value.trim();
+        const amount =
+          parseInt(document.getElementById("ngAmount").value) || 1000;
+        const names = document
+          .getElementById("ngMembers")
+          .value.split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        if (!name) {
+          toast("Give your circle a name");
+          return;
+        }
+        const id = uid("g");
+        const memberIds = [u.id];
+        const memberNames = { [u.id]: u.name };
+        names.forEach((n, i) => {
+          const mid = "m_" + id + "_" + i;
+          memberIds.push(mid);
+          memberNames[mid] = n;
+        });
+        db.groups[id] = {
+          id,
+          name,
+          type: selectedType,
+          cycleAmount: amount,
+          members: memberIds,
+          memberNames,
+          currentCycle: 1,
+          totalCycles: names.length + 1,
+          turnOrder: memberIds,
+          createdAt: Date.now(),
+        };
+        u.joinedGroups.push(id);
+        saveDB(db);
+        nav("group:" + id);
+        toast("Circle created 🎉");
+      }
+
+      function groupDetailScreen(gid) {
+        const g = db.groups[gid];
+        const u = currentUser();
+        if (!g) return emptyState("Circle not found");
+        const txs = db.transactions
+          .filter((t) => t.groupId === gid)
+          .sort((a, b) => b.ts - a.ts);
+        const myContribs = txs.filter(
+          (t) => t.userId === u.id && t.type === "contribution",
+        ).length;
+
+        return `
+  <div class="fade-in pt-12 px-5">
+    <button onclick="nav('groups')" class="w-9 h-9 rounded-full border border-[var(--line)] flex items-center justify-center mb-6"><i data-lucide="arrow-left" class="w-4 h-4"></i></button>
+    <span class="badge text-[9px] px-2 py-0.5 rounded-full ${g.type === "chit" ? "bg-[var(--gold-soft)] text-[var(--sage-deep)]" : "bg-[var(--sage-deep)]/10 text-[var(--sage-deep)]"} uppercase">${g.type === "chit" ? "Rotating Chit" : "Qard Hasan Pool"}</span>
+    <h2 class="font-display text-2xl font-semibold mt-2">${g.name}</h2>
+    <p class="text-[var(--muted)] text-sm mt-1">${g.members.length} members · ${fmtINR(g.cycleAmount)} per cycle · 0% interest always</p>
+
+    <div class="card p-4 mt-5">
+      <p class="text-xs uppercase tracking-wide text-[var(--muted)] mb-3">Members &amp; turn order</p>
+      <div class="space-y-2.5">
+        ${g.turnOrder
+          .map(
+            (mid, i) => `
+          <div class="flex items-center gap-3">
+            <div class="w-7 h-7 rounded-full ${i + 1 === g.currentCycle ? "bg-[var(--gold)]" : "bg-[var(--sage-deep)]/15"} text-${i + 1 === g.currentCycle ? "white" : "[var(--sage-deep)]"} text-xs flex items-center justify-center font-semibold">${i + 1}</div>
+            <span class="text-sm flex-1 ${mid === u.id ? "font-semibold" : ""}">${g.memberNames[mid]}${mid === u.id ? " (you)" : ""}</span>
+            ${i + 1 === g.currentCycle ? '<span class="text-[10px] badge text-[var(--gold)] uppercase">This turn</span>' : ""}
+          </div>`,
+          )
+          .join("")}
+      </div>
+    </div>
+
+    <button onclick="contributeToGroup('${gid}')" class="geo-btn w-full bg-[var(--sage-deep)] text-white font-semibold py-3.5 rounded-full text-[15px] mt-5 flex items-center justify-center gap-2">
+      <i data-lucide="qr-code" class="w-4 h-4"></i> Contribute ${fmtINR(g.cycleAmount)} via UPI
+    </button>
+
+    <div class="mt-7">
+      <p class="text-xs uppercase tracking-wide text-[var(--muted)] mb-3">Group ledger — visible to all members</p>
+      <div class="space-y-2.5">
+        ${
+          txs
+            .map(
+              (t) => `<div class="card p-3.5 flex items-center gap-3">
+          <div class="w-9 h-9 rounded-full bg-[var(--sage-deep)]/10 flex items-center justify-center text-xs font-semibold text-[var(--sage-deep)]">${(g.memberNames[t.userId] || "?")[0]}</div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold truncate">${g.memberNames[t.userId] || "Member"}</p>
+            <p class="text-xs text-[var(--muted)]">${t.note} · ${timeAgo(t.ts)}</p>
+          </div>
+          <span class="text-sm font-semibold text-[var(--sage-deep)]">${fmtINR(t.amount)}</span>
+        </div>`,
+            )
+            .join("") || emptyState("No contributions yet")
+        }
+      </div>
+    </div>
+  </div>`;
+      }
+
+      function contributeToGroup(gid) {
+        const g = db.groups[gid];
+        const u = currentUser();
+        const tx = {
+          id: uid("t"),
+          groupId: gid,
+          userId: u.id,
+          type: "contribution",
+          amount: g.cycleAmount,
+          note: `Cycle ${g.currentCycle} contribution`,
+          ts: Date.now(),
+          ref: "UPI" + Date.now().toString().slice(-8),
+        };
+        db.transactions.unshift(tx);
+        u.trustScore = Math.min(100, u.trustScore + 1);
+        saveDB(db);
+        simulateUPI(g.cycleAmount, "Group: " + g.name, () => {
+          render();
+          toast("Contribution recorded ✓");
+        });
+      }
+
+      /* -------- ZAKAT -------- */
+      function zakatScreen() {
+        const z = db.zakatAssets;
+        const totalAssets = z.cash + z.gold + z.savings + z.investments;
+        const netWorth = totalAssets - z.liabilities;
+        const nisabGoldGram = 87.48;
+        const goldRatePerGram = 6800;
+        const nisabValue = Math.round(nisabGoldGram * goldRatePerGram);
+        const eligible = netWorth >= nisabValue;
+        const zakatDue = eligible ? Math.round(netWorth * 0.025) : 0;
+
+        return `
+  <div class="fade-in pt-12 px-5">
+    <h2 class="font-display text-2xl font-semibold">Zakat Calculator</h2>
+    <p class="text-[var(--muted)] text-sm mt-1 mb-5">2.5% of net qualifying wealth, above Nisab</p>
+
+    <div class="card p-5 !bg-[var(--sage-deep)] !border-[var(--sage-deep)] text-white text-center">
+      <p class="text-white/60 text-xs uppercase tracking-wide">Zakat due this year</p>
+      <p class="font-display text-4xl font-semibold mt-1">${fmtINR(zakatDue)}</p>
+      <p class="text-white/50 text-xs mt-2">${eligible ? "You are above Nisab — Zakat is due" : "Below Nisab threshold — Zakat not obligatory"}</p>
+    </div>
+
+    <div class="card p-4 mt-4 space-y-3">
+      <p class="text-xs uppercase tracking-wide text-[var(--muted)]">Your assets</p>
+      ${zakatInput("cash", "Cash in hand / bank", z.cash)}
+      ${zakatInput("gold", "Gold &amp; silver value", z.gold)}
+      ${zakatInput("savings", "Savings &amp; deposits", z.savings)}
+      ${zakatInput("investments", "Investments / stocks", z.investments)}
+      ${zakatInput("liabilities", "Liabilities (debts owed)", z.liabilities)}
+      <button onclick="recalcZakat()" class="geo-btn w-full bg-[var(--gold)] text-[var(--ink)] font-semibold py-3 rounded-full text-sm mt-2">Recalculate</button>
+    </div>
+
+    <div class="card p-4 mt-4 !bg-[var(--gold-soft)]/40 !border-[var(--gold-soft)]">
+      <div class="flex justify-between text-xs mb-1"><span class="text-[var(--muted)]">Nisab threshold (87.48g gold)</span><span class="font-semibold">${fmtINR(nisabValue)}</span></div>
+      <div class="flex justify-between text-xs"><span class="text-[var(--muted)]">Your net qualifying wealth</span><span class="font-semibold">${fmtINR(netWorth)}</span></div>
+    </div>
+
+    ${
+      zakatDue > 0 ?
+        `
+    <button onclick="payZakat(${zakatDue})" class="geo-btn w-full bg-[var(--sage-deep)] text-white font-semibold py-3.5 rounded-full text-[15px] mt-5 flex items-center justify-center gap-2">
+      <i data-lucide="hand-coins" class="w-4 h-4"></i> Pay ${fmtINR(zakatDue)} via UPI
+    </button>`
+      : ""
+    }
+
+    <div class="mt-7">
+      <p class="text-xs uppercase tracking-wide text-[var(--muted)] mb-3">Verified recipients</p>
+      <div class="space-y-2.5">
+        ${[
+          "Al-Falah Trust — Education",
+          "Helping Hand Foundation — Medical",
+          "Khanagaon Masjid Relief Fund",
+        ]
+          .map(
+            (n) => `
+          <div class="card p-3.5 flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full bg-[var(--gold-soft)] flex items-center justify-center"><i data-lucide="shield-check" class="w-4 h-4 text-[var(--gold)]"></i></div>
+            <span class="text-sm font-semibold flex-1">${n}</span>
+            <i data-lucide="chevron-right" class="w-4 h-4 text-[var(--muted)]"></i>
+          </div>`,
+          )
+          .join("")}
+      </div>
+    </div>
+  </div>`;
+      }
+      function zakatInput(key, label, val) {
+        return `<div class="flex items-center justify-between gap-3">
+    <label class="text-sm text-[var(--ink)]/80 flex-1">${label}</label>
+    <input id="zk_${key}" type="number" value="${val}" class="w-28 px-3 py-2 rounded-lg border border-[var(--line)] bg-white text-sm text-right"/>
+  </div>`;
+      }
+      function recalcZakat() {
+        ["cash", "gold", "savings", "investments", "liabilities"].forEach(
+          (k) => {
+            db.zakatAssets[k] =
+              parseInt(document.getElementById("zk_" + k).value) || 0;
+          },
+        );
+        saveDB(db);
+        render();
+        toast("Zakat recalculated");
+      }
+      function payZakat(amount) {
+        const u = currentUser();
+        const tx = {
+          id: uid("t"),
+          groupId: null,
+          userId: u.id,
+          type: "zakat_paid",
+          amount,
+          note: "Zakat payment",
+          ts: Date.now(),
+          ref: "ZK-" + Date.now().toString().slice(-8),
+        };
+        db.transactions.unshift(tx);
+        saveDB(db);
+        simulateUPI(amount, "Zakat Payment", () => {
+          render();
+          toast("Zakat paid — may Allah accept it 🤲");
+        });
+      }
+
+      /* -------- LEDGER -------- */
+      function ledgerScreen() {
+        const u = currentUser();
+        const txs = db.transactions
+          .filter((t) => t.userId === u.id)
+          .sort((a, b) => b.ts - a.ts);
+        const income = txs
+          .filter((t) => t.type === "income")
+          .reduce((s, t) => s + t.amount, 0);
+        const spent = txs
+          .filter((t) =>
+            ["expense", "contribution", "zakat_paid", "loan_given"].includes(
+              t.type,
+            ),
+          )
+          .reduce((s, t) => s + t.amount, 0);
+
+        return `
+  <div class="fade-in pt-12 px-5">
+    <div class="flex justify-between items-center mb-1">
+      <h2 class="font-display text-2xl font-semibold">Halal Ledger</h2>
+      <button onclick="openAddTx()" class="w-9 h-9 rounded-full bg-[var(--sage-deep)] text-white flex items-center justify-center"><i data-lucide="plus" class="w-4 h-4"></i></button>
+    </div>
+    <p class="text-[var(--muted)] text-sm mb-5">Personal income &amp; expense tracker</p>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div class="card p-4">
+        <p class="text-xs text-[var(--muted)] uppercase tracking-wide">Income</p>
+        <p class="font-display text-xl font-semibold text-[var(--sage-deep)] mt-1">${fmtINR(income)}</p>
+      </div>
+      <div class="card p-4">
+        <p class="text-xs text-[var(--muted)] uppercase tracking-wide">Out (all)</p>
+        <p class="font-display text-xl font-semibold text-[var(--danger)] mt-1">${fmtINR(spent)}</p>
+      </div>
+    </div>
+
+    <div id="addTxForm" class="hidden card p-4 mt-4 space-y-3">
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="setTxType('income')" id="btnIncome" class="geo-btn py-2 rounded-lg text-xs font-semibold border-2 border-[var(--sage-deep)] bg-[var(--sage-deep)] text-white">Income</button>
+        <button onclick="setTxType('expense')" id="btnExpense" class="geo-btn py-2 rounded-lg text-xs font-semibold border-2 border-[var(--line)] text-[var(--muted)]">Expense</button>
+      </div>
+      <input id="txAmount" type="number" placeholder="Amount (₹)" class="w-full px-4 py-2.5 rounded-lg border border-[var(--line)] bg-white text-sm"/>
+      <input id="txNote" placeholder="Note (e.g. Grocery, Salary)" class="w-full px-4 py-2.5 rounded-lg border border-[var(--line)] bg-white text-sm"/>
+      <button onclick="addLedgerTx()" class="geo-btn w-full bg-[var(--gold)] text-[var(--ink)] font-semibold py-2.5 rounded-lg text-sm">Add entry</button>
+    </div>
+
+    <div class="mt-7 space-y-2.5">
+      ${txs.map(txRow).join("") || emptyState("No entries yet")}
+    </div>
+  </div>`;
+      }
+      let addTxType = "income";
+      function openAddTx() {
+        document.getElementById("addTxForm").classList.toggle("hidden");
+      }
+      function setTxType(t) {
+        addTxType = t;
+        document.getElementById("btnIncome").className =
+          "geo-btn py-2 rounded-lg text-xs font-semibold border-2 " +
+          (t === "income" ?
+            "border-[var(--sage-deep)] bg-[var(--sage-deep)] text-white"
+          : "border-[var(--line)] text-[var(--muted)]");
+        document.getElementById("btnExpense").className =
+          "geo-btn py-2 rounded-lg text-xs font-semibold border-2 " +
+          (t === "expense" ?
+            "border-[var(--danger)] bg-[var(--danger)] text-white"
+          : "border-[var(--line)] text-[var(--muted)]");
+      }
+      function addLedgerTx() {
+        const u = currentUser();
+        const amount = parseInt(document.getElementById("txAmount").value);
+        const note = document.getElementById("txNote").value.trim();
+        if (!amount) {
+          toast("Enter an amount");
+          return;
+        }
+        db.transactions.unshift({
+          id: uid("t"),
+          groupId: null,
+          userId: u.id,
+          type: addTxType,
+          amount,
+          note: note || (addTxType === "income" ? "Income" : "Expense"),
+          ts: Date.now(),
+          ref: "",
+        });
+        saveDB(db);
+        render();
+        toast("Entry added ✓");
+      }
+
+      /* -------- PROFILE -------- */
+      function profileScreen() {
+        const u = currentUser();
+        const myTx = db.transactions.filter((t) => t.userId === u.id);
+        const loansRepaid = myTx.filter((t) => t.type === "loan_repaid").length;
+        const contribsOnTime = myTx.filter(
+          (t) => t.type === "contribution",
+        ).length;
+        const groupCount = Object.values(db.groups).filter((g) =>
+          g.members.includes(u.id),
+        ).length;
+
+        return `
+  <div class="fade-in pt-12 px-5">
+    <div class="flex flex-col items-center text-center mb-6">
+      <div class="w-20 h-20 rounded-full bg-[var(--sage-deep)] text-white flex items-center justify-center font-display text-2xl font-semibold">${u.name[0]}</div>
+      <h2 class="font-display text-xl font-semibold mt-3">${u.name}</h2>
+      <p class="text-[var(--muted)] text-sm">${u.phone} · ${u.upi}</p>
+    </div>
+
+    <div class="card p-5 text-center">
+      <p class="text-xs uppercase tracking-wide text-[var(--muted)]">Trust Score</p>
+      <p class="font-display text-4xl font-semibold mt-1">${u.trustScore}<span class="text-base text-[var(--muted)]">/100</span></p>
+      <div class="progress-track h-2 mt-3"><div class="progress-fill h-2" style="width:${u.trustScore}%"></div></div>
+      <p class="text-xs text-[var(--muted)] mt-3 leading-relaxed">Built from on-time contributions and loan repayments — your collateral in a no-interest system is trust, not credit score.</p>
+    </div>
+
+    <div class="grid grid-cols-3 gap-2 mt-4">
+      <div class="card p-3 text-center">
+        <p class="font-display text-lg font-semibold">${groupCount}</p>
+        <p class="text-[10px] text-[var(--muted)] uppercase mt-0.5">Circles</p>
+      </div>
+      <div class="card p-3 text-center">
+        <p class="font-display text-lg font-semibold">${contribsOnTime}</p>
+        <p class="text-[10px] text-[var(--muted)] uppercase mt-0.5">Contributions</p>
+      </div>
+      <div class="card p-3 text-center">
+        <p class="font-display text-lg font-semibold">${loansRepaid}</p>
+        <p class="text-[10px] text-[var(--muted)] uppercase mt-0.5">Loans repaid</p>
+      </div>
+    </div>
+
+    <div class="mt-6 space-y-2">
+      ${profileRow("smartphone", "UPI ID", u.upi)}
+      ${profileRow("shield-check", "Verification", "Phone verified")}
+      ${profileRow("landmark", "Bank sync", "Not connected — manual UPI only in this demo")}
+    </div>
+
+    <button onclick="logout()" class="geo-btn w-full border border-[var(--danger)] text-[var(--danger)] font-semibold py-3.5 rounded-full text-[15px] mt-8 flex items-center justify-center gap-2">
+      <i data-lucide="log-out" class="w-4 h-4"></i> Log out
+    </button>
+  </div>`;
+      }
+      function profileRow(icon, label, val) {
+        return `<div class="card p-3.5 flex items-center gap-3">
+    <div class="w-9 h-9 rounded-full bg-[var(--sage-deep)]/10 flex items-center justify-center"><i data-lucide="${icon}" class="w-4 h-4 text-[var(--sage-deep)]"></i></div>
+    <div class="flex-1">
+      <p class="text-xs text-[var(--muted)]">${label}</p>
+      <p class="text-sm font-semibold">${val}</p>
+    </div>
+  </div>`;
+      }
+
+      /* -------- UPI PAY / QR -------- */
+      function upiPayScreen() {
+        const u = currentUser();
+        return `
+  <div class="fade-in pt-12 px-5">
+    <h2 class="font-display text-2xl font-semibold">Pay via UPI</h2>
+    <p class="text-[var(--muted)] text-sm mt-1 mb-6">Scan or send a request — powered by UPI deep links</p>
+
+    <div class="card p-6 flex flex-col items-center">
+      <div class="w-44 h-44 qr-dots rounded-xl bg-white border border-[var(--line)] flex items-center justify-center relative">
+        <div class="absolute inset-3 border-2 border-[var(--ink)] rounded-lg"></div>
+        <i data-lucide="qr-code" class="w-16 h-16 text-[var(--ink)] relative z-10 bg-white p-2 rounded"></i>
+      </div>
+      <p class="text-xs text-[var(--muted)] mt-4">${u.upi}</p>
+    </div>
+
+    <div class="card p-4 mt-4 space-y-3">
+      <input id="upiAmount" type="number" placeholder="Enter amount" class="w-full px-4 py-3 rounded-xl border border-[var(--line)] bg-white text-sm"/>
+      <input id="upiNote" placeholder="Note (optional)" class="w-full px-4 py-3 rounded-xl border border-[var(--line)] bg-white text-sm"/>
+      <button onclick="quickPay()" class="geo-btn w-full bg-[var(--sage-deep)] text-white font-semibold py-3 rounded-full text-sm">Generate payment link</button>
+    </div>
+
+    <div class="mt-6">
+      <p class="text-xs uppercase tracking-wide text-[var(--muted)] mb-3">Connected apps (demo)</p>
+      <div class="grid grid-cols-4 gap-2">
+        ${["GPay", "PhonePe", "Paytm", "BHIM"].map((app) => `<div class="card p-3 text-center"><p class="text-[10px] font-semibold">${app}</p></div>`).join("")}
+      </div>
+    </div>
+  </div>`;
+      }
+      function quickPay() {
+        const amount = parseInt(document.getElementById("upiAmount").value);
+        const note =
+          document.getElementById("upiNote").value.trim() ||
+          "HalalPay transfer";
+        if (!amount) {
+          toast("Enter an amount");
+          return;
+        }
+        simulateUPI(amount, note, () =>
+          toast("UPI link generated — would open your app"),
+        );
+      }
+      function simulateUPI(amount, note, cb) {
+        toast("Opening UPI app… " + fmtINR(amount));
+        setTimeout(() => {
+          toast("Payment successful ✓ " + note);
+          if (cb) setTimeout(cb, 300);
+        }, 900);
+      }
+
+      /* -------- BOTTOM NAV -------- */
+      function bottomNav() {
+        const items = [
+          { r: "home", icon: "house", label: "Home" },
+          { r: "groups", icon: "users-round", label: "Circles" },
+          { r: "zakat", icon: "hand-coins", label: "Zakat" },
+          { r: "ledger", icon: "notebook-pen", label: "Ledger" },
+          { r: "profile", icon: "user", label: "Profile" },
+        ];
+        const activeR =
+          route.startsWith("group:") ? "groups"
+          : route === "newgroup" ? "groups"
+          : route === "upi" ? "home"
+          : route;
+        return `<div class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-[var(--line)] px-2 py-2 flex justify-around z-40">
+    ${items
+      .map(
+        (it) => `
+      <div onclick="nav('${it.r}')" class="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl cursor-pointer ${activeR === it.r ? "text-[var(--sage-deep)]" : "text-[var(--muted)]"}">
+        <i data-lucide="${it.icon}" class="w-5 h-5"></i>
+        <span class="text-[10px] font-semibold">${it.label}</span>
+      </div>`,
+      )
+      .join("")}
+  </div>`;
+      }
+
+      function lucideReplace() {
+        try {
+          if (window.lucide && window.lucide.createIcons) lucide.createIcons();
+        } catch (e) {
+          console.warn("lucide icon render skipped", e);
+        }
+      }
+
+      render();
+    </script>
+  </body>
+</html>
 
