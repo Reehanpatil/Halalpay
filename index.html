@@ -259,6 +259,20 @@
       function fmtINR(n) {
         return "₹" + Number(n).toLocaleString("en-IN");
       }
+      function computeBalance(u) {
+        const myTx = db.transactions.filter((t) => t.userId === u.id);
+        const totalIn = myTx
+          .filter((t) => ["income", "loan_repaid", "payout"].includes(t.type))
+          .reduce((s, t) => s + t.amount, 0);
+        const totalOut = myTx
+          .filter((t) =>
+            ["expense", "contribution", "zakat_paid", "loan_given"].includes(
+              t.type,
+            ),
+          )
+          .reduce((s, t) => s + t.amount, 0);
+        return { balance: totalIn - totalOut, totalIn, totalOut };
+      }
       function fmtDate(ts) {
         return new Date(ts).toLocaleDateString("en-IN", {
           day: "numeric",
@@ -476,16 +490,7 @@
         const myTx = db.transactions
           .filter((t) => t.userId === u.id)
           .sort((a, b) => b.ts - a.ts);
-        const income = myTx
-          .filter((t) => t.type === "income")
-          .reduce((s, t) => s + t.amount, 0);
-        const expense = myTx
-          .filter((t) => t.type === "expense")
-          .reduce((s, t) => s + t.amount, 0);
-        const contributions = myTx
-          .filter((t) => t.type === "contribution")
-          .reduce((s, t) => s + t.amount, 0);
-        const balance = income - expense - contributions;
+        const { balance, totalIn, totalOut } = computeBalance(u);
 
         return `
   <div class="fade-in">
@@ -501,12 +506,27 @@
         <p class="text-white/60 text-xs uppercase tracking-wide">Net balance (demo)</p>
         <p class="font-display text-3xl font-semibold mt-1">${fmtINR(balance)}</p>
         <div class="flex gap-4 mt-3 text-xs text-white/70">
-          <span>↑ ${fmtINR(income)} in</span>
-          <span>↓ ${fmtINR(expense + contributions)} out</span>
+          <span>↑ ${fmtINR(totalIn)} in</span>
+          <span>↓ ${fmtINR(totalOut)} out</span>
+        </div>
+        <div class="flex gap-2 mt-4">
+          <button onclick="openWalletForm('add')" class="geo-btn flex-1 bg-white text-[var(--sage-deep)] font-semibold py-2.5 rounded-full text-xs flex items-center justify-center gap-1"><i data-lucide="plus" class="w-3.5 h-3.5"></i>Add Money</button>
+          <button onclick="openWalletForm('withdraw')" class="geo-btn flex-1 bg-white/15 border border-white/30 text-white font-semibold py-2.5 rounded-full text-xs flex items-center justify-center gap-1"><i data-lucide="minus" class="w-3.5 h-3.5"></i>Withdraw</button>
         </div>
       </div>
     </div>
     <div class="scallop-divider"></div>
+
+    <div id="walletForm" class="hidden px-5 pt-4">
+      <div class="card p-4 space-y-3">
+        <p id="walletFormTitle" class="text-sm font-semibold"></p>
+        <input id="walletAmount" type="number" placeholder="Amount (₹)" class="w-full px-4 py-2.5 rounded-lg border border-[var(--line)] bg-white text-sm"/>
+        <div class="flex gap-2">
+          <button onclick="closeWalletForm()" class="geo-btn flex-1 border border-[var(--line)] text-[var(--muted)] font-semibold py-2.5 rounded-lg text-sm">Cancel</button>
+          <button onclick="submitWalletForm()" class="geo-btn flex-1 bg-[var(--sage-deep)] text-white font-semibold py-2.5 rounded-lg text-sm">Confirm via UPI</button>
+        </div>
+      </div>
+    </div>
 
     <div class="px-5 -mt-5 relative z-10">
       <div class="grid grid-cols-4 gap-2">
@@ -548,6 +568,66 @@
     <div class="w-9 h-9 rounded-full bg-[var(--sage-deep)]/10 flex items-center justify-center"><i data-lucide="${icon}" class="w-4 h-4 text-[var(--sage-deep)]"></i></div>
     <span class="text-[11px] font-semibold text-[var(--ink)]">${label}</span>
   </div>`;
+      }
+
+      let walletMode = "add";
+      function openWalletForm(mode) {
+        walletMode = mode;
+        const panel = document.getElementById("walletForm");
+        panel.classList.remove("hidden");
+        document.getElementById("walletFormTitle").textContent =
+          mode === "add" ?
+            "Add money to your wallet"
+          : "Withdraw to your bank account";
+        document.getElementById("walletAmount").value = "";
+        document.getElementById("walletAmount").focus();
+      }
+      function closeWalletForm() {
+        document.getElementById("walletForm").classList.add("hidden");
+      }
+      function submitWalletForm() {
+        const u = currentUser();
+        const amount = parseInt(document.getElementById("walletAmount").value);
+        if (!amount || amount <= 0) {
+          toast("Enter a valid amount");
+          return;
+        }
+        if (walletMode === "withdraw") {
+          const { balance } = computeBalance(u);
+          if (amount > balance) {
+            toast(
+              "Withdraw amount exceeds your balance (" + fmtINR(balance) + ")",
+            );
+            return;
+          }
+        }
+        const tx = {
+          id: uid("t"),
+          groupId: null,
+          userId: u.id,
+          type: walletMode === "add" ? "income" : "expense",
+          amount,
+          note:
+            walletMode === "add" ?
+              "Added to wallet via UPI"
+            : "Withdrawn to bank via UPI",
+          ts: Date.now(),
+          ref: "UPI" + Date.now().toString().slice(-8),
+        };
+        db.transactions.unshift(tx);
+        saveDB(db);
+        simulateUPI(
+          amount,
+          walletMode === "add" ? "Add Money" : "Withdraw Money",
+          () => {
+            render();
+            toast(
+              walletMode === "add" ? "Money added ✓" : (
+                "Withdrawal successful ✓"
+              ),
+            );
+          },
+        );
       }
 
       function txRow(t) {
@@ -647,11 +727,12 @@
       function groupCard(g, u) {
         const contributed = db.transactions.filter(
           (t) => t.groupId === g.id && t.type === "contribution",
-        ).length;
+        );
+        const totalCollected = contributed.reduce((s, t) => s + t.amount, 0);
         const pct =
           g.type === "chit" ?
             Math.round((g.currentCycle / g.totalCycles) * 100)
-          : Math.min(100, contributed * 10);
+          : Math.min(100, contributed.length * 10);
         return `<div onclick="nav('group:${g.id}')" class="card p-4 cursor-pointer geo-btn">
     <div class="flex justify-between items-start">
       <div>
@@ -668,7 +749,11 @@
             `<div class="w-6 h-6 rounded-full bg-[var(--sage-deep)] text-white text-[10px] flex items-center justify-center font-semibold border-2 border-white">${(g.memberNames[m] || "?")[0]}</div>`,
         )
         .join("")}
-      <span class="text-xs text-[var(--muted)] ml-1">${g.members.length} members · ${fmtINR(g.cycleAmount)}/cycle</span>
+      <span class="text-xs text-[var(--muted)] ml-1">${g.members.length} members</span>
+    </div>
+    <div class="flex justify-between items-center mt-3 pt-3 border-t border-[var(--line)]">
+      <span class="text-xs text-[var(--muted)]">Total collected</span>
+      <span class="text-sm font-semibold text-[var(--sage-deep)]">${fmtINR(totalCollected)}</span>
     </div>
     ${g.type === "chit" ? `<div class="progress-track h-1.5 mt-3"><div class="progress-fill h-1.5" style="width:${pct}%"></div></div><p class="text-[11px] text-[var(--muted)] mt-1">Cycle ${g.currentCycle} of ${g.totalCycles}</p>` : ""}
   </div>`;
@@ -775,18 +860,58 @@
         const txs = db.transactions
           .filter((t) => t.groupId === gid)
           .sort((a, b) => b.ts - a.ts);
-        const myContribs = txs.filter(
-          (t) => t.userId === u.id && t.type === "contribution",
-        ).length;
+        const totalCollected = txs
+          .filter((t) => t.type === "contribution")
+          .reduce((s, t) => s + t.amount, 0);
+        const isOwner = g.members[0] === u.id;
 
         return `
   <div class="fade-in pt-12 px-5">
-    <button onclick="nav('groups')" class="w-9 h-9 rounded-full border border-[var(--line)] flex items-center justify-center mb-6"><i data-lucide="arrow-left" class="w-4 h-4"></i></button>
+    <div class="flex items-center justify-between mb-6">
+      <button onclick="nav('groups')" class="w-9 h-9 rounded-full border border-[var(--line)] flex items-center justify-center"><i data-lucide="arrow-left" class="w-4 h-4"></i></button>
+      <button onclick="toggleGroupMenu()" class="w-9 h-9 rounded-full border border-[var(--line)] flex items-center justify-center relative"><i data-lucide="more-vertical" class="w-4 h-4"></i></button>
+    </div>
+
+    <div id="groupMenu" class="hidden card p-2 mb-4 space-y-1">
+      <div onclick="promptAddMember()" class="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer">
+        <i data-lucide="user-plus" class="w-4 h-4 text-[var(--sage-deep)]"></i><span class="text-sm font-medium">Add member</span>
+      </div>
+      ${
+        !isOwner ?
+          `<div onclick="exitGroup('${gid}')" class="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer">
+        <i data-lucide="log-out" class="w-4 h-4 text-[var(--danger)]"></i><span class="text-sm font-medium text-[var(--danger)]">Exit circle</span>
+      </div>`
+        : `<div onclick="deleteGroup('${gid}')" class="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer">
+        <i data-lucide="trash-2" class="w-4 h-4 text-[var(--danger)]"></i><span class="text-sm font-medium text-[var(--danger)]">Delete circle</span>
+      </div>`
+      }
+    </div>
+
     <span class="badge text-[9px] px-2 py-0.5 rounded-full ${g.type === "chit" ? "bg-[var(--gold-soft)] text-[var(--sage-deep)]" : "bg-[var(--sage-deep)]/10 text-[var(--sage-deep)]"} uppercase">${g.type === "chit" ? "Rotating Chit" : "Qard Hasan Pool"}</span>
     <h2 class="font-display text-2xl font-semibold mt-2">${g.name}</h2>
-    <p class="text-[var(--muted)] text-sm mt-1">${g.members.length} members · ${fmtINR(g.cycleAmount)} per cycle · 0% interest always</p>
+    <p class="text-[var(--muted)] text-sm mt-1">${fmtINR(g.cycleAmount)} per cycle · 0% interest always</p>
 
-    <div class="card p-4 mt-5">
+    <div class="grid grid-cols-2 gap-3 mt-5">
+      <div class="card p-4">
+        <p class="text-xs text-[var(--muted)] uppercase tracking-wide">Total collected</p>
+        <p class="font-display text-xl font-semibold text-[var(--sage-deep)] mt-1">${fmtINR(totalCollected)}</p>
+      </div>
+      <div class="card p-4">
+        <p class="text-xs text-[var(--muted)] uppercase tracking-wide">Members</p>
+        <p class="font-display text-xl font-semibold mt-1">${g.members.length}</p>
+      </div>
+    </div>
+
+    <div id="addMemberForm" class="hidden card p-4 mt-4 space-y-3">
+      <p class="text-xs uppercase tracking-wide text-[var(--muted)]">Add new member</p>
+      <input id="newMemberName" placeholder="Member name" class="w-full px-4 py-2.5 rounded-lg border border-[var(--line)] bg-white text-sm"/>
+      <div class="flex gap-2">
+        <button onclick="document.getElementById('addMemberForm').classList.add('hidden')" class="geo-btn flex-1 border border-[var(--line)] text-[var(--muted)] font-semibold py-2.5 rounded-lg text-sm">Cancel</button>
+        <button onclick="confirmAddMember('${gid}')" class="geo-btn flex-1 bg-[var(--sage-deep)] text-white font-semibold py-2.5 rounded-lg text-sm">Add to circle</button>
+      </div>
+    </div>
+
+    <div class="card p-4 mt-4">
       <p class="text-xs uppercase tracking-wide text-[var(--muted)] mb-3">Members &amp; turn order</p>
       <div class="space-y-2.5">
         ${g.turnOrder
@@ -794,7 +919,7 @@
             (mid, i) => `
           <div class="flex items-center gap-3">
             <div class="w-7 h-7 rounded-full ${i + 1 === g.currentCycle ? "bg-[var(--gold)]" : "bg-[var(--sage-deep)]/15"} text-${i + 1 === g.currentCycle ? "white" : "[var(--sage-deep)]"} text-xs flex items-center justify-center font-semibold">${i + 1}</div>
-            <span class="text-sm flex-1 ${mid === u.id ? "font-semibold" : ""}">${g.memberNames[mid]}${mid === u.id ? " (you)" : ""}</span>
+            <span class="text-sm flex-1 ${mid === u.id ? "font-semibold" : ""}">${g.memberNames[mid]}${mid === u.id ? " (you)" : ""}${g.members[0] === mid ? " · owner" : ""}</span>
             ${i + 1 === g.currentCycle ? '<span class="text-[10px] badge text-[var(--gold)] uppercase">This turn</span>' : ""}
           </div>`,
           )
@@ -826,6 +951,69 @@
       </div>
     </div>
   </div>`;
+      }
+
+      function toggleGroupMenu() {
+        document.getElementById("groupMenu").classList.toggle("hidden");
+      }
+      function promptAddMember() {
+        document.getElementById("groupMenu").classList.add("hidden");
+        const form = document.getElementById("addMemberForm");
+        form.classList.remove("hidden");
+        document.getElementById("newMemberName").focus();
+      }
+      function confirmAddMember(gid) {
+        const g = db.groups[gid];
+        const name = document.getElementById("newMemberName").value.trim();
+        if (!name) {
+          toast("Enter a name");
+          return;
+        }
+        const mid = uid("m");
+        g.members.push(mid);
+        g.memberNames[mid] = name;
+        g.turnOrder.push(mid);
+        g.totalCycles = g.turnOrder.length;
+        saveDB(db);
+        nav("group:" + gid);
+        toast(name + " added to circle ✓");
+      }
+      function exitGroup(gid) {
+        const g = db.groups[gid];
+        const u = currentUser();
+        if (
+          !confirm(
+            'Exit "' + g.name + '"? You will lose access to this circle.',
+          )
+        )
+          return;
+        g.members = g.members.filter((m) => m !== u.id);
+        g.turnOrder = g.turnOrder.filter((m) => m !== u.id);
+        delete g.memberNames[u.id];
+        g.totalCycles = g.turnOrder.length;
+        u.joinedGroups = u.joinedGroups.filter((id) => id !== gid);
+        saveDB(db);
+        nav("groups");
+        toast("You left " + g.name);
+      }
+      function deleteGroup(gid) {
+        const g = db.groups[gid];
+        if (
+          !confirm(
+            'Delete "' +
+              g.name +
+              '"? This removes it for all members and cannot be undone.',
+          )
+        )
+          return;
+        db.transactions = db.transactions.filter((t) => t.groupId !== gid);
+        Object.values(db.users).forEach((us) => {
+          us.joinedGroups = (us.joinedGroups || []).filter((id) => id !== gid);
+        });
+        delete db.groups[gid];
+        saveDB(db);
+        nav("groups");
+        toast("Circle deleted");
       }
 
       function contributeToGroup(gid) {
@@ -1198,4 +1386,3 @@
     </script>
   </body>
 </html>
-
